@@ -12,24 +12,13 @@ for N = 1:Test_value
 
 %---Initialization------------------------------------------------------    
  [Nonce, Intial_Vector, Data_Payload, Section_value, Key_Vector, Header_TB] = Initialization(Header_length, Data_length);   
-    
-%---Create Nonce-----------------------------------------
-Nonce = Create_Nonce();
-
-%---Create Initial Vector----------------------------------
-Intial_Vector = Initialization_Initial_Vector(Header_length, Nonce);
-
-%---Input Data---------------------------------------------
-[Data_Payload, Section_value] = Input_Data(Data_length);
-
-%---Create Key vector--------------------------------------
-Key_Vector = AES_key();
-
-%---Create Header------------------------------------------
-Header_TB = Create_Header(Header_length);
 
 %--------Create MIC------------------------------------------------------
 MIC = Create_MIC(Header_TB, Intial_Vector, Section_value, Data_Payload, Key_Vector);
+
+%------Create Encryption Data------------------------------------------------------------------------
+[Encrypted_Data, Encrypted_MIC] = Encrypted_
+
 
 %------Create Encryption Data------------------------------------------------------------------------
 for k = 0:(Section_value - 1)
@@ -82,9 +71,9 @@ Encrypted_Counter_MIC = Encrypted_AES(Counter, Key_Vector); %AES Counter MIC
 Encrypted_Decrypted_MIC = xor(Decrypted_MIC, Encrypted_Counter_MIC); %зашифровали MIC
  
 
-% %---Add random error bit MIC-----------------------------------------------
-% ERROR_bit = randi([1 128], 1, 1);
-% Encrypted_Decrypted_MIC(ERROR_bit) = 1;
+%---Add random error bit MIC-----------------------------------------------
+ERROR_bit = randi([1 128], 1, 1);
+Encrypted_Decrypted_MIC(ERROR_bit) = 1;
 
 %---Search error------------------------------------------------------
 if Encrypted_Decrypted_MIC == Encrypted_MIC
@@ -97,34 +86,3 @@ end
 end
 
 %----Clear workspace---------------------------------------------------
-clear n
-clear i
-clear k
-clear N
-clear N_inc_bin
-clear AES_Counter
-clear AES_Data_Payload
-clear AES_Data_Payload_encrypt
-clear AES_encrypt
-clear AES_Header
-clear AES_Initional_Vector
-clear Counter
-clear Encrypted_MIC
-clear Flag_Counter
-clear Flag_Initial_Vector
-clear Frame_value
-clear Header_TB
-clear Header_TB_128
-clear Intional_Vector
-clear Key_Vector
-clear len
-clear MIC
-clear N_inc
-clear Nonce
-clear Result
-clear TBlen
-clear TBlen_dec
-clear TBlen_bin
-clear Data_length
-clear Header_length
-clear ERROR_bit_test

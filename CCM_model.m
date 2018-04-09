@@ -4,7 +4,7 @@ clear
 %---Input Parameters-------------------------------------------------------
 ERROR = 0; %количество ошибочных передач
 Test_value = 1000; %количество тестовых пусков
-Data_length = 400; %размер данных
+Data_length = 300; %размер данных
 Header_length = 16; %размер заголовка (<128)
 
 
@@ -67,9 +67,9 @@ Encrypted_Counter_MIC = Encrypted_AES(Counter, Key_Vector); %AES Counter MIC
 Encrypted_Decrypted_MIC = xor(Decrypted_MIC, Encrypted_Counter_MIC); %зашифровали MIC
  
 
-%---Add random error bit MIC-----------------------------------------------
-ERROR_bit = randi([1 128], 1, 1);
-Encrypted_Decrypted_MIC(ERROR_bit) = 1;
+% %---Add random error bit MIC-----------------------------------------------
+% ERROR_bit = randi([1 128], 1, 1);
+% Encrypted_Decrypted_MIC(ERROR_bit) = 1;
 
 %---Search error------------------------------------------------------
 if Encrypted_Decrypted_MIC == Encrypted_MIC
@@ -82,34 +82,3 @@ end
 end
 
 %----Clear workspace---------------------------------------------------
-clear n
-clear i
-clear k
-clear N
-clear N_inc_bin
-clear AES_Counter
-clear AES_Data_Payload
-clear AES_Data_Payload_encrypt
-clear AES_encrypt
-clear AES_Header
-clear AES_Initional_Vector
-clear Counter
-clear Encrypted_MIC
-clear Flag_Counter
-clear Flag_Initial_Vector
-clear Frame_value
-clear Header_TB
-clear Header_TB_128
-clear Intional_Vector
-clear Key_Vector
-clear len
-clear MIC
-clear N_inc
-clear Nonce
-clear Result
-clear TBlen
-clear TBlen_dec
-clear TBlen_bin
-clear Data_length
-clear Header_length
-clear ERROR_bit_test
