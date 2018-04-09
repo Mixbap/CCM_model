@@ -26,23 +26,8 @@ Key_Vector = AES_key();
 Header_TB = Create_Header(Header_length);
 
 
-%----Encryption header-----------------------------------
-Encrypted_Initial_Vector = Encrypted_AES(Intial_Vector, Key_Vector);%зашифровали initial vector
-AES_Header = xor(Encrypted_Initial_Vector, Header_TB);%xor зашифрованого initial vector и заголовка
-
 %--------Create MIC------------------------------------------------------
-In_Data = AES_Header;
-
-for k = 0:(Section_value - 1)
-    
-    Encrypted_input_data = Encrypted_AES(In_Data, Key_Vector);%шифрование данных
-    In_Data = xor(Encrypted_input_data, Data_Payload(128*k + 1 : 128*k + 128));%xor с данными  
-end
-
-Enc_input_data = Encrypted_AES(In_Data, Key_Vector);
-
-MIC = Enc_input_data(1:64); %взятие старших 64 бит MIC 
-
+MIC = Create_MIC(Header_TB, Intial_Vector, Section_value, Data_Payload, Key_Vector);
 
 %------Create Encryption Data------------------------------------------------------------------------
 for k = 0:(Section_value - 1)
@@ -83,44 +68,12 @@ for k = 0:(Section_value - 1)
     
 end
 
-% %---Decrypted MIC----------------------------------------------------------
-% Counter = Create_Counter(0, Nonce);
-% 
-% Encrypted_Counter_MIC = Encrypted_AES(Counter, Key_Vector); %AES Counter MIC
-% Decrypted_MIC = xor(Encrypted_MIC, Encrypted_Counter_MIC); %шифрованный MIC
-
 %---Decrypted MIC-------------------------------------------------------
-In_Data = AES_Header;
-
-for k = 0:(Section_value - 1)
-    
-    Encrypted_input_data = Encrypted_AES(In_Data, Key_Vector);%шифрование данных
-    In_Data = xor(Encrypted_input_data, Decrypted_Data(128*k + 1 : 128*k + 128));%xor с данными  
-end
-
-Enc_input_data = Encrypted_AES(In_Data, Key_Vector);
-
-Decrypted_MIC = Enc_input_data(1:64); %взятие старших 64 бит MIC 
-
-
-% %---Decrypted Header-------------------------------------------------------
-% In_Data = Encrypted_AES(Decrypted_MIC, Key_Vector);%зашифровали дешифрованый MIC
-% 
-% for k = (Section_value - 1):0
-%     AES_MIC_xor_Decrypted_Data = xor(In_Data, Decrypted_Data(128*k + 1 : 128*k + 128));%xor с данными
-%     In_Data = Encrypted_AES(AES_MIC_xor_Decrypted_Data, Key_Vector);%шифрование данных
-% end
-% 
-% Encrypted_Initial_Vector = Encrypted_AES(Intial_Vector, Key_Vector);%зашифровали initial vector
-% 
-% Decrypted_Header = xor(Encrypted_Initial_Vector, In_Data);
-
-
-% ---Add random error bit MIC-----------------------------------------------
-ERROR_bit = randi([1 64], 1, 1);
-Decrypted_MIC(ERROR_bit) = 1;
-% Decrypted_MIC(ERROR_bit) = not(Decrypted_MIC(ERROR_bit));
-
+Decrypted_MIC = Create_MIC(Header_TB, Intial_Vector, Section_value, Decrypted_Data, Key_Vector);
+ 
+% % ---Add random error bit MIC-----------------------------------------------
+% ERROR_bit = randi([1 64], 1, 1);
+% Decrypted_MIC(ERROR_bit) = 1;
 
 %---Search error------------------------------------------------------
 if Decrypted_MIC == MIC(1:64)
