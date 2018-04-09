@@ -10,6 +10,9 @@ Header_length = 16; %размер заголовка (<128)
 
 for N = 1:Test_value
 
+%---Initialization------------------------------------------------------    
+ [Nonce, Intial_Vector, Data_Payload, Section_value, Key_Vector, Header_TB] = Initialization(Header_length, Data_length);   
+    
 %---Create Nonce-----------------------------------------
 Nonce = Create_Nonce();
 
@@ -69,13 +72,22 @@ end
 
 %---Decrypted MIC-------------------------------------------------------
 Decrypted_MIC = Create_MIC(Header_TB, Intial_Vector, Section_value, Decrypted_Data, Key_Vector);
+
+
+%-------Create Encryption Decrypted_MIC-------------------------------------
+Decrypted_MIC(65:128) = 0; %заполнение MIC нулями
+Counter = Create_Counter(0, Nonce);
+
+Encrypted_Counter_MIC = Encrypted_AES(Counter, Key_Vector); %AES Counter MIC
+Encrypted_Decrypted_MIC = xor(Decrypted_MIC, Encrypted_Counter_MIC); %зашифровали MIC
  
-% % ---Add random error bit MIC-----------------------------------------------
-% ERROR_bit = randi([1 64], 1, 1);
-% Decrypted_MIC(ERROR_bit) = 1;
+
+% %---Add random error bit MIC-----------------------------------------------
+% ERROR_bit = randi([1 128], 1, 1);
+% Encrypted_Decrypted_MIC(ERROR_bit) = 1;
 
 %---Search error------------------------------------------------------
-if Decrypted_MIC == MIC(1:64)
+if Encrypted_Decrypted_MIC == Encrypted_MIC
     
 else
    ERROR = ERROR + 1; 

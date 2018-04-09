@@ -1,7 +1,0 @@
-function [Intial_Vector] = Initialization_Initial_Vector(  )
-clear
-Flag_Initial_Vector(1:8) = 0;
-
-
-end
-
