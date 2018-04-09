@@ -8,9 +8,6 @@ Test_value = 1000; %количество тестовых пусков
 Data_length = 400; %размер данных
 Header_length = 16; %размер заголовка (<128)
 
-
-for N = 1:Test_value
-
 %---Create Nonce-----------------------------------------
 Nonce = Create_Nonce();
 
@@ -24,10 +21,17 @@ Data_Payload = Input_Data(Data_length);
 Key_Vector = AES_key();
 
 %---Create Header------------------------------------------
-Header_TB = Create_Header(Header_length);
+Header_TB = Header(Header_length);
 
 %---Create Counter-----------------------------------------
-Counter = Create_Counter(N, Nonce);
+N = 10;
+Counter = Create_Counter(N);
+
+
+for N = 1:Test_value
+
+%---Create Flag counter----------------------------------
+Flag_Counter(1:8) = 0;
 
 
 %----Encryption header-----------------------------------
