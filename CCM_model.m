@@ -1,8 +1,7 @@
 script
 clear
 
-%---Input Parameters-----------------------------------
-ERROR_bit = 0; %количество ошибочных бит
+%---Input Parameters-------------------------------------------------------
 ERROR = 0; %количество ошибочных передач
 Test_value = 1000; %количество тестовых пусков
 Data_length = 400; %размер данных
@@ -15,10 +14,10 @@ for N = 1:Test_value
 Nonce = Create_Nonce();
 
 %---Create Initial Vector----------------------------------
-Intional_Vector = Initialization_Initial_Vector(Header_length, Nonce);
+Intial_Vector = Initialization_Initial_Vector(Header_length, Nonce);
 
 %---Input Data---------------------------------------------
-Data_Payload = Input_Data(Data_length);
+[Data_Payload, Section_value] = Input_Data(Data_length);
 
 %---Create Key vector--------------------------------------
 Key_Vector = AES_key();
@@ -26,116 +25,112 @@ Key_Vector = AES_key();
 %---Create Header------------------------------------------
 Header_TB = Create_Header(Header_length);
 
-%---Create Counter-----------------------------------------
-Counter = Create_Counter(N, Nonce);
-
 
 %----Encryption header-----------------------------------
-for i = 1:128
-    AES_Initional_Vector(i) = xor(Intional_Vector(i), Key_Vector(i)); %AES для Initial Vector
-end
-
-Header_TB_128(length(Header_TB):128) = 0;%дополнение заголовка нулями
-
-for i = 1:128
-    AES_Header(i) = xor(AES_Initional_Vector(i), Header_TB_128(i)); %XOR с заголовком
-end
-%-----------------------------------------------------------
-
-Frame_value = ceil(length(Data_Payload)/128);%определение количества фреймов
-
-Data_Payload_128(1:length(Data_Payload)) = Data_Payload;
-Data_Payload_128((length(Data_Payload) + 1):(128*Frame_value)) = 0; %дополнение последнего фрейма нулями 
+Encrypted_Initial_Vector = Encrypted_AES(Intial_Vector, Key_Vector);%зашифровали initial vector
+AES_Header = xor(Encrypted_Initial_Vector, Header_TB);%xor зашифрованого initial vector и заголовка
 
 %--------Create MIC------------------------------------------------------
-AES_encrypt(i) = xor(AES_Header(i), Key_Vector(i)); %AES заголовка и AES Initional Vector
+In_Data = AES_Header;
 
-for k = 0:Frame_value - 1
-for i = 1:128
-    AES_Data_Payload(i) = xor(AES_encrypt(i), Data_Payload_128((128*k) + i));%xor с данными
-    AES_Data_Payload_encrypt(i) = xor(AES_Data_Payload(i), Key_Vector(i));%AES
-end
+for k = 0:(Section_value - 1)
+    
+    Encrypted_input_data = Encrypted_AES(In_Data, Key_Vector);%шифрование данных
+    In_Data = xor(Encrypted_input_data, Data_Payload(128*k + 1 : 128*k + 128));%xor с данными  
 end
 
-MIC = AES_Data_Payload_encrypt(1:64); %взятие старших 64 бит MIC 
+Enc_input_data = Encrypted_AES(In_Data, Key_Vector);
+
+MIC = Enc_input_data(1:64); %взятие старших 64 бит MIC 
 
 
 %------Create Encryption Data------------------------------------------------------------------------
-for k = 0:Frame_value - 1
-    N_inc_bin = dec2bin(k + 1, 20); %переход к двоичному числу для счетчика
+for k = 0:(Section_value - 1)
     
-    for i = 1:20
-        N_inc(i) = str2num(N_inc_bin(i)); %получение массива N_inc
-    end 
+    Counter = Create_Counter(k+1, Nonce);
     
-    %формирование Counter
-    Counter(1:8) = Flag_Counter;
-    Counter(9:108) = Nonce;
-    Counter(109:128) = N_inc;
+    Encrypted_Counter = Encrypted_AES(Counter, Key_Vector); %зашифровали Counter
+    Encrypted_Data(128*k + 1 : 128*k + 128) = xor(Encrypted_Counter, Data_Payload(128*k + 1 : 128*k + 128)); %xor данных с AES Counter
     
-    for n = 1:128
-        AES_Counter(n) = xor(Counter(n), Key_Vector(n)); %AES Counter
-        Encrypted_Data((128*k) + n) = xor(AES_Counter(n), Data_Payload_128((128*k) + n)); %xor данных с AES Counter
-    end
 end
+
+
 %-------Create Encryption MIC-------------------------------------
-%формирование Counter для MIC
-Counter(1:8) = Flag_Counter;
-Counter(9:108) = Nonce;
-Counter(109:128) = 0;
-
 MIC(65:128) = 0; %заполнение MIC нулями
+Counter = Create_Counter(0, Nonce);
 
-for n = 1:128
-    AES_Counter(n) = xor(Counter(n), Key_Vector(n)); %AES Counter MIC
-    Encrypted_MIC(n) = xor(MIC(n), AES_Counter(n)); 
+Encrypted_Counter_MIC = Encrypted_AES(Counter, Key_Vector); %AES Counter MIC
+Encrypted_MIC = xor(MIC, Encrypted_Counter_MIC); %зашифровали MIC
+
+
+%---Create full data section-----------------------------------------------
+Full_Data_section = [Header_TB Encrypted_Data Encrypted_MIC];
+
+%--------------------------------------------------------------------------
+%------------------------Decrypted-----------------------------------------
+%--------------------------Data--------------------------------------------
+%--------------------------------------------------------------------------
+%--------------------------------------------------------------------------
+
+
+%---Decrypted Data---------------------------------------------------------
+for k = 0:(Section_value - 1)
+    
+    Counter = Create_Counter(k+1, Nonce);
+    
+    Encrypted_Counter = Encrypted_AES(Counter, Key_Vector); %зашифровали Counter
+    Decrypted_Data(128*k + 1 : 128*k + 128) = xor(Encrypted_Counter, Encrypted_Data(128*k + 1 : 128*k + 128)); %xor данных с AES Counter
+    
 end
 
-%-------Create Encrypted TB Data----------------------------------------------------------
-Encrypted_TB_Data(1 : TBlen_dec) = Header_TB;
+% %---Decrypted MIC----------------------------------------------------------
+% Counter = Create_Counter(0, Nonce);
+% 
+% Encrypted_Counter_MIC = Encrypted_AES(Counter, Key_Vector); %AES Counter MIC
+% Decrypted_MIC = xor(Encrypted_MIC, Encrypted_Counter_MIC); %шифрованный MIC
 
-Encrypted_TB_Data((TBlen_dec + 1) : (TBlen_dec + (128 * Frame_value))) = Encrypted_Data;
-len = TBlen_dec + (128 * Frame_value);
+%---Decrypted MIC-------------------------------------------------------
+In_Data = AES_Header;
 
-Encrypted_TB_Data((len + 1) : (len + 128)) = Encrypted_MIC;
-
-%--------Decryption Data---------------------------------------------------
-for k = 0:Frame_value - 1
-    N_inc_bin = dec2bin(k + 1, 20); %переход к двоичному числу для счетчика
+for k = 0:(Section_value - 1)
     
-    for i = 1:20
-        N_inc(i) = str2num(N_inc_bin(i)); %получение массива N_inc
-    end 
-    
-    %формирование Counter
-    Counter(1:8) = Flag_Counter;
-    Counter(9:108) = Nonce;
-    Counter(109:128) = N_inc;
-    
-    for n = 1:128
-        AES_Counter(n) = xor(Counter(n), Key_Vector(n)); %AES Counter
-        Decrypted_Data_Payload((128*k) + n) = xor(AES_Counter(n), Encrypted_Data((128*k) + n)); %xor данных с AES Counter
-    end
+    Encrypted_input_data = Encrypted_AES(In_Data, Key_Vector);%шифрование данных
+    In_Data = xor(Encrypted_input_data, Decrypted_Data(128*k + 1 : 128*k + 128));%xor с данными  
 end
+
+Enc_input_data = Encrypted_AES(In_Data, Key_Vector);
+
+Decrypted_MIC = Enc_input_data(1:64); %взятие старших 64 бит MIC 
+
+
+% %---Decrypted Header-------------------------------------------------------
+% In_Data = Encrypted_AES(Decrypted_MIC, Key_Vector);%зашифровали дешифрованый MIC
+% 
+% for k = (Section_value - 1):0
+%     AES_MIC_xor_Decrypted_Data = xor(In_Data, Decrypted_Data(128*k + 1 : 128*k + 128));%xor с данными
+%     In_Data = Encrypted_AES(AES_MIC_xor_Decrypted_Data, Key_Vector);%шифрование данных
+% end
+% 
+% Encrypted_Initial_Vector = Encrypted_AES(Intial_Vector, Key_Vector);%зашифровали initial vector
+% 
+% Decrypted_Header = xor(Encrypted_Initial_Vector, In_Data);
+
+
+% ---Add random error bit MIC-----------------------------------------------
+ERROR_bit = randi([1 64], 1, 1);
+Decrypted_MIC(ERROR_bit) = 1;
+% Decrypted_MIC(ERROR_bit) = not(Decrypted_MIC(ERROR_bit));
+
 
 %---Search error------------------------------------------------------
-Result = xor(Decrypted_Data_Payload, Data_Payload_128);
-
-for i = 1:length(Result)
-if Result(i)
-    ERROR_bit = ERROR_bit + 1;
-end
+if Decrypted_MIC == MIC(1:64)
+    
+else
+   ERROR = ERROR + 1; 
 end
 
-ERROR_bit_test = ERROR_bit;
-
-if ERROR_bit_test
-    ERROR = ERROR + 1;
-    ERROR_bit_test = 0;
-end
 
 end
-
 
 %----Clear workspace---------------------------------------------------
 clear n
